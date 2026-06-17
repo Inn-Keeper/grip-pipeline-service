@@ -13,6 +13,9 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 /**
  * Stateless JWT security. Supabase signs session tokens with HS256 using the
@@ -29,15 +32,19 @@ public class SecurityConfig {
     private static final String HMAC_SHA256 = "HmacSHA256";
 
     private final String jwtSecret;
+    private final String allowedOrigins;
 
-    public SecurityConfig(@Value("${spring.security.oauth2.resourceserver.jwt.secret-key:}")
-            String jwtSecret) {
+    public SecurityConfig(
+            @Value("${spring.security.oauth2.resourceserver.jwt.secret-key:}") String jwtSecret,
+            @Value("${grip.cors.allowed-origins:http://localhost:5173}") String allowedOrigins) {
         this.jwtSecret = jwtSecret;
+        this.allowedOrigins = allowedOrigins;
     }
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.authorizeHttpRequests(
+        http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .authorizeHttpRequests(
                         auth ->
                                 auth.requestMatchers(
                                                 "/docs",
@@ -62,6 +69,17 @@ public class SecurityConfig {
                                 ex.authenticationEntryPoint(
                                         new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));
         return http.build();
+    }
+
+    @Bean
+    CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(java.util.List.of(allowedOrigins.split(",")));
+        config.setAllowedMethods(java.util.List.of("GET", "OPTIONS"));
+        config.setAllowedHeaders(java.util.List.of("Authorization", "Content-Type"));
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/**", config);
+        return source;
     }
 
     /**

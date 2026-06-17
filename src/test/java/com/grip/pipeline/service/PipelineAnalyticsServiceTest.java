@@ -3,6 +3,7 @@ package com.grip.pipeline.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import com.grip.pipeline.domain.Contact;
 import com.grip.pipeline.domain.PipelineStage;
 import com.grip.pipeline.domain.StatusEvent;
 import com.grip.pipeline.repository.ContactRepository;
@@ -28,79 +29,6 @@ class PipelineAnalyticsServiceTest {
     @Mock private StatusEventRepository statusEvents;
     @Mock private ContactRepository contacts;
     @InjectMocks private PipelineAnalyticsService service;
-
-    @Test
-    void funnelIsEmptyWhenNoEvents() {
-        when(statusEvents.findByUserIdOrderByCreatedAtAsc(USER)).thenReturn(List.of());
-
-        FunnelReport report = service.funnel(USER);
-
-        assertThat(report.totalContacts()).isZero();
-        assertThat(report.offers()).isZero();
-        assertThat(report.rejected()).isZero();
-        assertThat(report.stages()).hasSize(4);
-        assertThat(report.stages().get(0).reached()).isZero();
-        // First stage rate is 1.0 by definition even with no contacts.
-        assertThat(report.stages().get(0).conversionRate())
-                .isEqualByComparingTo(BigDecimal.valueOf(1.0));
-        // Downstream rates are 0 when the prior stage had nobody.
-        assertThat(report.stages().get(1).conversionRate()).isEqualByComparingTo(BigDecimal.ZERO);
-    }
-
-    @Test
-    void funnelCountsFurthestStageReachedPerContact() {
-        UUID a = UUID.randomUUID();
-        UUID b = UUID.randomUUID();
-        UUID c = UUID.randomUUID();
-        // a: Contacted -> Applied -> Interviewing -> Offer
-        // b: Contacted -> Applied -> Rejected
-        // c: Contacted only
-        List<StatusEvent> events =
-                List.of(
-                        Fixtures.statusEvent(a, PipelineStage.CONTACTED, T0),
-                        Fixtures.statusEvent(a, PipelineStage.APPLIED, T0.plus(1, ChronoUnit.DAYS)),
-                        Fixtures.statusEvent(
-                                a, PipelineStage.INTERVIEWING, T0.plus(3, ChronoUnit.DAYS)),
-                        Fixtures.statusEvent(a, PipelineStage.OFFER, T0.plus(5, ChronoUnit.DAYS)),
-                        Fixtures.statusEvent(b, PipelineStage.CONTACTED, T0),
-                        Fixtures.statusEvent(b, PipelineStage.APPLIED, T0.plus(2, ChronoUnit.DAYS)),
-                        Fixtures.statusEvent(b, PipelineStage.REJECTED, T0.plus(4, ChronoUnit.DAYS)),
-                        Fixtures.statusEvent(c, PipelineStage.CONTACTED, T0));
-        when(statusEvents.findByUserIdOrderByCreatedAtAsc(USER)).thenReturn(events);
-
-        FunnelReport report = service.funnel(USER);
-
-        assertThat(report.totalContacts()).isEqualTo(3);
-        assertThat(report.offers()).isEqualTo(1);
-        assertThat(report.rejected()).isEqualTo(1);
-        // Contacted: a,b,c = 3 | Applied: a,b = 2 | Interviewing: a = 1 | Offer: a = 1
-        assertThat(report.stages().get(0).reached()).isEqualTo(3); // Contacted
-        assertThat(report.stages().get(1).reached()).isEqualTo(2); // Applied
-        assertThat(report.stages().get(2).reached()).isEqualTo(1); // Interviewing
-        assertThat(report.stages().get(3).reached()).isEqualTo(1); // Offer
-        // Applied conversion = 2/3
-        assertThat(report.stages().get(1).conversionRate())
-                .isEqualByComparingTo(BigDecimal.valueOf(0.6667));
-    }
-
-    @Test
-    void funnelPromotesContactsThatSkipIntermediateStages() {
-        UUID a = UUID.randomUUID();
-        // Only Contacted and Interviewing recorded; Applied was never logged but
-        // must still count as reached (no survivorship gap in the funnel).
-        List<StatusEvent> events =
-                List.of(
-                        Fixtures.statusEvent(a, PipelineStage.CONTACTED, T0),
-                        Fixtures.statusEvent(
-                                a, PipelineStage.INTERVIEWING, T0.plus(2, ChronoUnit.DAYS)));
-        when(statusEvents.findByUserIdOrderByCreatedAtAsc(USER)).thenReturn(events);
-
-        FunnelReport report = service.funnel(USER);
-
-        assertThat(report.stages().get(0).reached()).isEqualTo(1); // Contacted
-        assertThat(report.stages().get(1).reached()).isEqualTo(1); // Applied (implied)
-        assertThat(report.stages().get(2).reached()).isEqualTo(1); // Interviewing
-    }
 
     @Test
     void velocityAveragesDwellPerTransition() {

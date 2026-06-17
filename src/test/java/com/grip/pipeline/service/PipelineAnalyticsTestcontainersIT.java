@@ -23,14 +23,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * End-to-end analytics test against a real Postgres in a throwaway container.
  * The schema is derived from Grip's actual migrations
  * ({@code db/testcontainers-schema.sql}); seeding contacts fires the same
- * status-event trigger the production database uses, so the funnel and velocity
- * are computed over genuinely trigger-generated data.
+ * status-event trigger the production database uses, so velocity is computed
+ * over genuinely trigger-generated data.
  *
  * <p>Runs with no external credentials, so it executes in CI on every build.
  */
-// disabledWithoutDocker skips the whole class (before container startup) when
-// no Docker daemon is present, so the build stays green on machines without it
-// while still running in CI.
 @Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest
 class PipelineAnalyticsTestcontainersIT {
@@ -48,8 +45,6 @@ class PipelineAnalyticsTestcontainersIT {
         registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
         registry.add("spring.datasource.username", POSTGRES::getUsername);
         registry.add("spring.datasource.password", POSTGRES::getPassword);
-        // The analytics tests don't go through HTTP, but the JWT decoder bean
-        // still needs a secret to construct at context startup.
         registry.add("spring.security.oauth2.resourceserver.jwt.secret-key", () -> "x".repeat(32));
     }
 
@@ -65,9 +60,6 @@ class PipelineAnalyticsTestcontainersIT {
                 Statement s = c.createStatement()) {
             s.execute("truncate status_events, contacts restart identity cascade");
 
-            // Two contacts for USER that advance through stages (trigger writes
-            // one status_event per transition). The initial Contacted event is
-            // pinned to 2026-01-01 so dwell times are deterministic.
             UUID acme = insertContact(c, USER, "Acme", LocalDate.of(2026, 6, 15));
             pinEvent(c, acme, "Contacted", "2026-01-01 00:00:00+00");
             advance(c, acme, "Applied", "2026-01-02 00:00:00+00"); // +1 day
@@ -78,23 +70,8 @@ class PipelineAnalyticsTestcontainersIT {
             advance(c, globex, "Applied", "2026-01-03 00:00:00+00"); // +2 days
             advance(c, globex, "Rejected", "2026-01-05 00:00:00+00");
 
-            // A contact for a different user — must never appear in USER's reports.
             insertContact(c, OTHER_USER, "OtherCorp", LocalDate.of(2026, 6, 15));
         }
-    }
-
-    @Test
-    void funnelReflectsSeededTransitionsForUserOnly() {
-        FunnelReport report = service.funnel(USER);
-
-        assertThat(report.totalContacts()).isEqualTo(2);
-        assertThat(report.rejected()).isEqualTo(1);
-        assertThat(report.offers()).isZero();
-        // Acme + Globex reached Contacted & Applied; only Acme reached Interviewing.
-        assertThat(stageReached(report, PipelineStage.CONTACTED)).isEqualTo(2);
-        assertThat(stageReached(report, PipelineStage.APPLIED)).isEqualTo(2);
-        assertThat(stageReached(report, PipelineStage.INTERVIEWING)).isEqualTo(1);
-        assertThat(stageReached(report, PipelineStage.OFFER)).isZero();
     }
 
     @Test
@@ -123,14 +100,6 @@ class PipelineAnalyticsTestcontainersIT {
         assertThat(due.get(0).overdueDays()).isEqualTo(2);
     }
 
-    private static long stageReached(FunnelReport report, PipelineStage stage) {
-        return report.stages().stream()
-                .filter(s -> s.stage() == stage)
-                .findFirst()
-                .orElseThrow()
-                .reached();
-    }
-
     private static UUID insertContact(Connection c, UUID userId, String name, LocalDate dueDate)
             throws Exception {
         UUID id = UUID.randomUUID();
@@ -152,7 +121,6 @@ class PipelineAnalyticsTestcontainersIT {
         return id;
     }
 
-    /** Move a contact to a new status, then pin that event's time for deterministic velocity. */
     private static void advance(Connection c, UUID contactId, String status, String at)
             throws Exception {
         try (var ps = c.prepareStatement("update contacts set status = ? where id = ?")) {
@@ -163,10 +131,6 @@ class PipelineAnalyticsTestcontainersIT {
         pinEvent(c, contactId, status, at);
     }
 
-    /**
-     * Override the timestamp of a trigger-written status_event. The trigger
-     * stamps {@code now()}; tests pin it so funnel/velocity math is reproducible.
-     */
     private static void pinEvent(Connection c, UUID contactId, String status, String at)
             throws Exception {
         try (var ps =

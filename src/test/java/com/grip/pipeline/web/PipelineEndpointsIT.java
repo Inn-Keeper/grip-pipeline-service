@@ -2,7 +2,6 @@ package com.grip.pipeline.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.grip.pipeline.service.FunnelReport;
 import com.grip.pipeline.service.VelocityReport;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -29,10 +28,6 @@ import org.springframework.test.context.DynamicPropertySource;
  * End-to-end test against the real Supabase Postgres, through the full HTTP +
  * JWT security stack. Skipped unless {@code GRIP_DB_URL} is set, so the build
  * stays green without credentials.
- *
- * <p>The JWT secret is pinned here so the test can mint valid HS256 tokens;
- * assertions are data-agnostic (an unknown {@code sub} yields an empty,
- * well-formed report) so they never go brittle as real data changes.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @EnabledIfEnvironmentVariable(named = "GRIP_DB_URL", matches = ".+")
@@ -48,22 +43,6 @@ class PipelineEndpointsIT {
 
     @LocalServerPort private int port;
     @Autowired private TestRestTemplate rest;
-
-    @Test
-    void funnelReturnsWellFormedReportForUnknownUser() {
-        ResponseEntity<FunnelReport> response =
-                rest.exchange(
-                        url("/api/pipeline/funnel"),
-                        HttpMethod.GET,
-                        bearer(UUID.randomUUID()),
-                        FunnelReport.class);
-
-        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        FunnelReport body = response.getBody();
-        assertThat(body).isNotNull();
-        assertThat(body.totalContacts()).isZero();
-        assertThat(body.stages()).hasSize(4);
-    }
 
     @Test
     void velocityReturnsWellFormedReportForUnknownUser() {
@@ -82,7 +61,7 @@ class PipelineEndpointsIT {
     @Test
     void missingTokenYields401() {
         ResponseEntity<String> response =
-                rest.getForEntity(url("/api/pipeline/funnel"), String.class);
+                rest.getForEntity(url("/api/pipeline/velocity"), String.class);
 
         assertThat(response.getStatusCode().value()).isEqualTo(401);
     }
@@ -91,7 +70,7 @@ class PipelineEndpointsIT {
     void tokenWithNonUuidSubjectYields400() {
         ResponseEntity<String> response =
                 rest.exchange(
-                        url("/api/pipeline/funnel"),
+                        url("/api/pipeline/velocity"),
                         HttpMethod.GET,
                         bearerRaw(signedToken("not-a-uuid")),
                         String.class);

@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew *)",
+      "Bash(gradle *)",
+      "Bash(git log *)",
+      "Bash(git add *)",
+      "WebSearch"
+    ],
+    "additionalDirectories": [
+      "/tmp"
+    ]
+  }
+}

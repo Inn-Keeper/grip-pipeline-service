@@ -15,3 +15,5 @@ bin/
 # Local env / secrets — never commit Supabase credentials
 .env
 .env.local
+
+.grip-token

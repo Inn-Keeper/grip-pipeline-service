@@ -29,10 +29,13 @@ this service (reads) ─┘
 
 - **Read-only JPA** entities map the real Grip tables; `ddl-auto: none` so the
   service never mutates the schema (Supabase migrations own it).
-- **RLS note:** the service connects with a privileged role that bypasses
-  Supabase Row-Level Security, so every query is explicitly scoped by `userId`.
-  `userId` is a request parameter today; the intended next step is a JWT filter
-  that derives it from the Supabase session.
+- **Auth:** every `/api` request requires a Supabase session **JWT** (HS256,
+  validated with the project's JWT secret). The user is taken from the token's
+  `sub` claim, so no endpoint accepts a user id from the caller — a token holder
+  can only read their own pipeline. The service connects with a role that
+  bypasses Supabase RLS, so this token-derived scoping is the isolation boundary.
+- **Virtual threads** (`spring.threads.virtual.enabled`): each blocking request
+  runs on a Java 21 virtual thread.
 
 ## Endpoints
 
@@ -42,35 +45,37 @@ this service (reads) ─┘
 | GET    | `/api/pipeline/velocity`| Avg days spent per stage transition                |
 | GET    | `/api/pipeline/due`     | Follow-ups due on/before a date (default: today)   |
 
-All take `?userId=<uuid>`. `/due` also accepts `?asOf=YYYY-MM-DD`.
-OpenAPI UI at `/docs`.
+`/due` accepts an optional `?asOf=YYYY-MM-DD`. All require an
+`Authorization: Bearer <jwt>` header. OpenAPI UI at `/docs` (public).
 
 ## Run it
 
 The service points at your real Supabase Postgres via env vars.
 
 ```bash
-cp .env.example .env        # fill in GRIP_DB_URL / GRIP_DB_PASSWORD
-export $(grep -v '^#' .env | xargs)
+cp .env.example .env   # fill in GRIP_DB_*, GRIP_JWT_SECRET
+set -a; . ./.env; set +a
 ./gradlew bootRun
 ```
 
-Then:
+Then call with a Supabase session token (the `access_token` from a signed-in
+client, or mint one with the JWT secret):
 
 ```bash
-USER=<your-supabase-user-uuid>
-curl "http://localhost:8080/api/pipeline/funnel?userId=$USER"
-curl "http://localhost:8080/api/pipeline/velocity?userId=$USER"
-curl "http://localhost:8080/api/pipeline/due?userId=$USER"
+TOKEN=<supabase-access-token>
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/pipeline/funnel
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/pipeline/velocity
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/pipeline/due
 ```
+
+Or open `http://localhost:8080/docs`, click **Authorize**, paste the token, and
+use **Try it out**.
 
 ### Docker
 
 ```bash
 docker build -t grip-pipeline-service .
-docker run --rm -p 8080:8080 \
-  -e GRIP_DB_URL=... -e GRIP_DB_USER=... -e GRIP_DB_PASSWORD=... \
-  grip-pipeline-service
+docker run --rm -p 8080:8080 --env-file .env grip-pipeline-service
 ```
 
 ## Tests
@@ -82,11 +87,17 @@ docker run --rm -p 8080:8080 \
 - **Unit tests** (`PipelineAnalyticsServiceTest`) cover the funnel/velocity math
   and its edge cases (empty pipeline, skipped stages, single-event contacts,
   overdue-day arithmetic) with mocked repositories. These always run.
-- **Integration tests** (`PipelineEndpointsIT`) hit the live Supabase DB and the
-  full HTTP stack. They are **skipped unless `GRIP_DB_URL` is set**, so the build
-  is green without credentials. Their assertions are data-agnostic (an unknown
-  `userId` yields an empty, well-formed report) so they don't go brittle as real
-  data changes.
+- **Testcontainers IT** (`PipelineAnalyticsTestcontainersIT`) spins a throwaway
+  Postgres, applies a schema derived from Grip's real migrations
+  (`src/test/resources/db/testcontainers-schema.sql`), seeds contacts so the
+  status-event trigger fires, and asserts funnel/velocity/due — including
+  cross-user isolation. Needs no credentials; **skipped automatically when Docker
+  is unavailable** (`disabledWithoutDocker`), so it runs in CI.
+- **Live integration test** (`PipelineEndpointsIT`) hits the real Supabase DB
+  through the full HTTP + JWT stack (mints its own HS256 token, asserts 401 with
+  no token and 400 for a non-UUID subject). **Skipped unless `GRIP_DB_URL` is
+  set.** Assertions are data-agnostic (an unknown `sub` yields an empty report)
+  so they don't go brittle as real data changes.
 
 ## Notes
 

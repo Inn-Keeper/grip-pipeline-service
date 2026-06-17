@@ -1,6 +1,19 @@
 spring:
   application:
     name: grip-pipeline-service
+  threads:
+    # Java 21 virtual threads: each blocking request (JDBC, etc.) runs on a
+    # cheap virtual thread instead of a pooled platform thread.
+    virtual:
+      enabled: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Supabase signs session JWTs with HS256 using the project's JWT
+          # secret (Project Settings → API → JWT Secret). Supplied via env.
+          # Base64-encoded so binary secrets survive .env round-tripping.
+          secret-key: ${GRIP_JWT_SECRET:}
   datasource:
     # Point these at your Supabase Postgres. Use the direct connection (port 5432)
     # or the session pooler; never commit real credentials — supply via env.

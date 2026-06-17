@@ -1,5 +1,7 @@
 # grip-pipeline-service
 
+[![CI](https://github.com/Inn-Keeper/grip-pipeline-service/actions/workflows/ci.yml/badge.svg)](https://github.com/Inn-Keeper/grip-pipeline-service/actions/workflows/ci.yml)
+
 A small, polished **Spring Boot (Java 21)** service that adds hiring-pipeline
 analytics and follow-up reminders on top of the [Grip](../tech-refresh) job-hunt
 toolkit. It reads Grip's existing Supabase Postgres tables (`contacts`,
@@ -48,30 +50,79 @@ this service (reads) ─┘
 `/due` accepts an optional `?asOf=YYYY-MM-DD`. All require an
 `Authorization: Bearer <jwt>` header. OpenAPI UI at `/docs` (public).
 
-## Run it
+## Run it yourself (step by step)
 
-The service points at your real Supabase Postgres via env vars.
+### Prerequisites
+
+- **JDK 21** (the build is pinned to it). Check with `java -version`. On macOS
+  with multiple JDKs, point this shell at 21 with
+  `export JAVA_HOME=$(/usr/libexec/java_home -v 21)`.
+- **Docker** — only needed to *run* the Testcontainers test locally; the app
+  itself does not need it (`brew install colima docker && colima start`).
+- A **Supabase project** — you need its database connection and JWT secret.
+
+### 1. Configure secrets
 
 ```bash
-cp .env.example .env   # fill in GRIP_DB_*, GRIP_JWT_SECRET
-set -a; . ./.env; set +a
+cp .env.example .env
+```
+
+Open `.env` and fill in three values from the Supabase dashboard:
+
+| Variable | Where to find it |
+| --- | --- |
+| `GRIP_DB_URL` | **Connect → Session pooler**. Take the host/port/db only and prefix `jdbc:` — e.g. `jdbc:postgresql://aws-0-<region>.pooler.supabase.com:5432/postgres`. The direct `db.<ref>.supabase.co` host is IPv6-only and often unreachable, so prefer the pooler. |
+| `GRIP_DB_USER` | The pooler username, which includes the project ref: `postgres.<project-ref>`. |
+| `GRIP_DB_PASSWORD` | **Project Settings → Database → Database password** (reset it there if you don't know it). |
+| `GRIP_JWT_SECRET` | **Project Settings → API → JWT Secret**. Required, or the app won't start. |
+
+`.env` is gitignored — never commit it.
+
+### 2. Start the service
+
+```bash
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+export COPYFILE_DISABLE=1          # only matters on macOS external drives (see Notes)
+set -a; . ./.env; set +a           # load .env into the environment
 ./gradlew bootRun
 ```
 
-Then call with a Supabase session token (the `access_token` from a signed-in
-client, or mint one with the JWT secret):
+It starts on `http://localhost:8080`. Stop with `Ctrl-C`.
+
+### 3. Get a token and call the API
+
+Every `/api` call needs a Supabase **session JWT** (`access_token`). Easiest
+ways to get one:
+
+- Sign in on the Grip web/mobile app and copy `access_token` from the Supabase
+  session (e.g. browser devtools → Application → Local Storage), **or**
+- Mint one via the Supabase Auth REST API (command below).
 
 ```bash
-TOKEN=<supabase-access-token>
+curl -s "https://<project-ref>.supabase.co/auth/v1/token?grant_type=password" \
+  -H "apikey: <anon-key>" -H "Content-Type: application/json" \
+  -d '{"email":"you@example.com","password":"..."}' | jq -r .access_token
+```
+
+Then:
+
+```bash
+TOKEN=<paste-access-token>
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/pipeline/funnel
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/pipeline/velocity
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/pipeline/due
 ```
 
-Or open `http://localhost:8080/docs`, click **Authorize**, paste the token, and
-use **Try it out**.
+No `userId` is needed — it comes from the token. A request with no/invalid
+token returns **401**.
 
-### Docker
+### Inspect it visually
+
+Open **<http://localhost:8080/docs>** (Swagger UI). Click **Authorize**, paste
+your token, then use **Try it out** on any endpoint to see the live response.
+The raw OpenAPI spec is at `/v3/api-docs` (importable into Postman/Bruno).
+
+### Run with Docker instead
 
 ```bash
 docker build -t grip-pipeline-service .
@@ -98,6 +149,21 @@ docker run --rm -p 8080:8080 --env-file .env grip-pipeline-service
   no token and 400 for a non-UUID subject). **Skipped unless `GRIP_DB_URL` is
   set.** Assertions are data-agnostic (an unknown `sub` yields an empty report)
   so they don't go brittle as real data changes.
+
+To run the live test against your own Supabase, load `.env` first:
+
+```bash
+set -a; . ./.env; set +a
+./gradlew test --tests 'com.grip.pipeline.web.PipelineEndpointsIT'
+```
+
+### Continuous integration
+
+`.github/workflows/ci.yml` runs `./gradlew build` on every push and PR to
+`main`. GitHub's `ubuntu-latest` runners have a Docker daemon, so the
+Testcontainers IT actually executes there. The live Supabase IT stays skipped
+(no `GRIP_DB_URL`), so **CI needs no secrets**. The test HTML report is uploaded
+as a build artifact.
 
 ## Notes
 

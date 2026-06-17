@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # ubuntu-latest ships a running Docker daemon, so the Testcontainers IT
+      # (PipelineAnalyticsTestcontainersIT) actually runs here — unlike a laptop
+      # without Docker, where it auto-skips. The live Supabase IT stays skipped
+      # (no GRIP_DB_URL), so CI needs no secrets.
+      - name: Build and test
+        run: ./gradlew build --no-daemon
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: build/reports/tests/test
+          if-no-files-found: ignore

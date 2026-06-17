@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: grip-pipeline-service
+  datasource:
+    # Point these at your Supabase Postgres. Use the direct connection (port 5432)
+    # or the session pooler; never commit real credentials — supply via env.
+    url: ${GRIP_DB_URL:jdbc:postgresql://localhost:5432/postgres}
+    username: ${GRIP_DB_USER:postgres}
+    password: ${GRIP_DB_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      # The Grip schema is owned by Supabase migrations. This service only reads;
+      # it must never create, alter, or validate-then-mutate the schema.
+      ddl-auto: none
+    open-in-view: false
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+grip:
+  reminders:
+    # Daily at 08:00. Override for demos, e.g. every minute: "0 * * * * *".
+    cron: "0 0 8 * * *"
+    zone: UTC
+
+springdoc:
+  swagger-ui:
+    path: /docs
+
+server:
+  port: ${PORT:8080}

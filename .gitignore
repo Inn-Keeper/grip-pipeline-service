@@ -1,0 +1,16 @@
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# macOS — AppleDouble sidecars (created on external/exFAT drives)
+.DS_Store
+._*
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Local env / secrets — never commit Supabase credentials
+.env
+.env.local

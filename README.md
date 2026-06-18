@@ -25,8 +25,8 @@ does heavy reads and time-based jobs.
 web/mobile (writes) ─┐
                      ├──► Supabase Postgres (contacts, status_events)
 this service (reads) ─┘
-   controller ──► service (funnel / velocity / due) ──► repository (JPA)
-   scheduler ───► notifier (logging; swappable for email/push)
+   controller ──► service (velocity) ──► repository (JPA)
+   scheduler ───► analytics (due) ───► notifier (logging; swappable for email/push)
 ```
 
 - **Read-only JPA** entities map the real Grip tables; `ddl-auto: none` so the
@@ -41,14 +41,11 @@ this service (reads) ─┘
 
 ## Endpoints
 
-| Method | Path                    | Description                                        |
-| ------ | ----------------------- | -------------------------------------------------- |
-| GET    | `/api/pipeline/funnel`  | Per-stage reach + conversion rates                 |
-| GET    | `/api/pipeline/velocity`| Avg days spent per stage transition                |
-| GET    | `/api/pipeline/due`     | Follow-ups due on/before a date (default: today)   |
+| Method | Path                     | Description                                     |
+| ------ | ------------------------ | ----------------------------------------------- |
+| GET    | `/api/pipeline/velocity` | Avg days spent per stage transition (read-only) |
 
-`/due` accepts an optional `?asOf=YYYY-MM-DD`. All require an
-`Authorization: Bearer <jwt>` header. OpenAPI UI at `/docs` (public).
+All require an `Authorization: Bearer <jwt>` header. OpenAPI UI at `/docs` (public).
 
 ## Run it yourself (step by step)
 
@@ -108,9 +105,7 @@ Then:
 
 ```bash
 TOKEN=<paste-access-token>
-curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/pipeline/funnel
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/pipeline/velocity
-curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/pipeline/due
 ```
 
 No `userId` is needed — it comes from the token. A request with no/invalid
@@ -135,13 +130,13 @@ docker run --rm -p 8080:8080 --env-file .env grip-pipeline-service
 ./gradlew build
 ```
 
-- **Unit tests** (`PipelineAnalyticsServiceTest`) cover the funnel/velocity math
+- **Unit tests** (`PipelineAnalyticsServiceTest`) cover the velocity math
   and its edge cases (empty pipeline, skipped stages, single-event contacts,
   overdue-day arithmetic) with mocked repositories. These always run.
 - **Testcontainers IT** (`PipelineAnalyticsTestcontainersIT`) spins a throwaway
   Postgres, applies a schema derived from Grip's real migrations
   (`src/test/resources/db/testcontainers-schema.sql`), seeds contacts so the
-  status-event trigger fires, and asserts funnel/velocity/due — including
+  status-event trigger fires, and asserts velocity/due — including
   cross-user isolation. Needs no credentials; **skipped automatically when Docker
   is unavailable** (`disabledWithoutDocker`), so it runs in CI.
 - **Live integration test** (`PipelineEndpointsIT`) hits the real Supabase DB

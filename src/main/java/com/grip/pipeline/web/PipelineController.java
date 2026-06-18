@@ -46,6 +46,18 @@ public class PipelineController {
         return analytics.velocity(currentUserId(jwt));
     }
 
+    @Operation(summary = "Test endpoint with sample data")
+    @GetMapping("/test")
+    public TestResponse test(@AuthenticationPrincipal Jwt jwt) {
+        return new TestResponse(
+                "✅ Backend is working!",
+                "User ID: " + currentUserId(jwt),
+                "Velocity data is empty because you have no status transitions yet. "
+                        + "Add contacts with multiple status events to see velocity analytics.");
+    }
+
+    record TestResponse(String message, String userId, String note) {}
+
     /** The Supabase user id is the JWT subject. */
     private static UUID currentUserId(Jwt jwt) {
         try {

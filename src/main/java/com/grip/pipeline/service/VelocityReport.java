@@ -19,5 +19,5 @@ public record VelocityReport(List<StageVelocity> stages) {
      * @param transitions number of observed transitions averaged
      */
     public record StageVelocity(
-            PipelineStage fromStage, PipelineStage toStage, BigDecimal avgDays, long transitions) {}
+            PipelineStage fromStage, PipelineStage toStage, BigDecimal avgDays, long transitions) { }
 }

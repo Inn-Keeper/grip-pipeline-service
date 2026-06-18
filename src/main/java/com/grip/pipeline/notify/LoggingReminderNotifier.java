@@ -11,17 +11,17 @@ import org.springframework.stereotype.Component;
 @Component
 public class LoggingReminderNotifier implements ReminderNotifier {
 
-    private static final Logger log = LoggerFactory.getLogger(LoggingReminderNotifier.class);
+    private static final Logger LOG = LoggerFactory.getLogger(LoggingReminderNotifier.class);
 
     @Override
     public void notifyDue(UUID userId, List<DueContact> due) {
         if (due.isEmpty()) {
-            log.info("No follow-ups due for user {}", userId);
+            LOG.info("No follow-ups due for user {}", userId);
             return;
         }
-        log.info("{} follow-up(s) due for user {}:", due.size(), userId);
+        LOG.info("{} follow-up(s) due for user {}:", due.size(), userId);
         for (DueContact contact : due) {
-            log.info(
+            LOG.info(
                     "  • {} [{}] — {} (due {}, {} day(s) overdue)",
                     contact.name(),
                     contact.stage().dbValue(),

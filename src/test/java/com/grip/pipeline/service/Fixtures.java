@@ -16,7 +16,7 @@ import java.util.UUID;
  */
 final class Fixtures {
 
-    private Fixtures() {}
+    private Fixtures() { }
 
     static StatusEvent statusEvent(UUID contactId, PipelineStage stage, Instant at) {
         StatusEvent event = instantiate(StatusEvent.class);

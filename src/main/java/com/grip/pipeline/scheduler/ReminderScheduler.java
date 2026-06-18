@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class ReminderScheduler {
 
-    private static final Logger log = LoggerFactory.getLogger(ReminderScheduler.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ReminderScheduler.class);
 
     private final ContactRepository contacts;
     private final PipelineAnalyticsService analytics;
@@ -44,14 +44,14 @@ public class ReminderScheduler {
     public void dispatchDailyReminders() {
         LocalDate today = LocalDate.now(clock);
         List<UUID> users = contacts.findUsersWithDueActions(today);
-        log.info("Reminder sweep for {}: {} user(s) with due actions", today, users.size());
+        LOG.info("Reminder sweep for {}: {} user(s) with due actions", today, users.size());
 
         for (UUID userId : users) {
             try {
                 List<DueContact> due = analytics.due(userId, today);
                 notifier.notifyDue(userId, due);
             } catch (RuntimeException ex) {
-                log.error("Failed to dispatch reminders for user {}", userId, ex);
+                LOG.error("Failed to dispatch reminders for user {}", userId, ex);
             }
         }
     }

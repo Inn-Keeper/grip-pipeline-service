@@ -3,7 +3,6 @@ package com.grip.pipeline.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
-import com.grip.pipeline.domain.Contact;
 import com.grip.pipeline.domain.PipelineStage;
 import com.grip.pipeline.domain.StatusEvent;
 import com.grip.pipeline.repository.ContactRepository;

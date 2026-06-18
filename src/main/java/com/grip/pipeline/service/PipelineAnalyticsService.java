@@ -83,7 +83,7 @@ public class PipelineAnalyticsService {
         return result;
     }
 
-    private record TransitionKey(PipelineStage from, PipelineStage to) {}
+    private record TransitionKey(PipelineStage from, PipelineStage to) { }
 
     /** Running sum of dwell seconds for one transition type, kept as a separate concern. */
     private static final class DurationAccumulator {

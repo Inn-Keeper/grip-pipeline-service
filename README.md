@@ -31,8 +31,8 @@ this service (reads) ─┘
 
 - **Read-only JPA** entities map the real Grip tables; `ddl-auto: none` so the
   service never mutates the schema (Supabase migrations own it).
-- **Auth:** every `/api` request requires a Supabase session **JWT** (HS256,
-  validated with the project's JWT secret). The user is taken from the token's
+- **Auth:** every `/api` request requires a Supabase session **JWT** (ES256,
+  validated with the project's JWKS endpoint). The user is taken from the token's
   `sub` claim, so no endpoint accepts a user id from the caller — a token holder
   can only read their own pipeline. The service connects with a role that
   bypasses Supabase RLS, so this token-derived scoping is the isolation boundary.
@@ -56,7 +56,7 @@ All require an `Authorization: Bearer <jwt>` header. OpenAPI UI at `/docs` (publ
   `export JAVA_HOME=$(/usr/libexec/java_home -v 21)`.
 - **Docker** — only needed to *run* the Testcontainers test locally; the app
   itself does not need it (`brew install colima docker && colima start`).
-- A **Supabase project** — you need its database connection and JWT secret.
+- A **Supabase project** — you need its database connection and Auth JWKS URL.
 
 ### 1. Configure secrets
 
@@ -64,14 +64,14 @@ All require an `Authorization: Bearer <jwt>` header. OpenAPI UI at `/docs` (publ
 cp .env.example .env
 ```
 
-Open `.env` and fill in three values from the Supabase dashboard:
+Open `.env` and fill in values from the Supabase dashboard:
 
 | Variable | Where to find it |
 | --- | --- |
 | `GRIP_DB_URL` | **Connect → Session pooler**. Take the host/port/db only and prefix `jdbc:` — e.g. `jdbc:postgresql://aws-0-<region>.pooler.supabase.com:5432/postgres`. The direct `db.<ref>.supabase.co` host is IPv6-only and often unreachable, so prefer the pooler. |
 | `GRIP_DB_USER` | The pooler username, which includes the project ref: `postgres.<project-ref>`. |
 | `GRIP_DB_PASSWORD` | **Project Settings → Database → Database password** (reset it there if you don't know it). |
-| `GRIP_JWT_SECRET` | **Project Settings → API → JWT Secret**. Required, or the app won't start. |
+| `GRIP_JWK_SET_URI` | Optional override for another Supabase project: `https://<project-ref>.supabase.co/auth/v1/.well-known/jwks.json`. |
 
 `.env` is gitignored — never commit it.
 
@@ -140,10 +140,10 @@ docker run --rm -p 8080:8080 --env-file .env grip-pipeline-service
   cross-user isolation. Needs no credentials; **skipped automatically when Docker
   is unavailable** (`disabledWithoutDocker`), so it runs in CI.
 - **Live integration test** (`PipelineEndpointsIT`) hits the real Supabase DB
-  through the full HTTP + JWT stack (mints its own HS256 token, asserts 401 with
-  no token and 400 for a non-UUID subject). **Skipped unless `GRIP_DB_URL` is
-  set.** Assertions are data-agnostic (an unknown `sub` yields an empty report)
-  so they don't go brittle as real data changes.
+  through the full HTTP + JWT stack, asserts 401 with no token, and 400 for a
+  non-UUID subject. **Skipped unless `GRIP_DB_URL` is set.** Assertions are
+  data-agnostic (an unknown `sub` yields an empty report) so they don't go
+  brittle as real data changes.
 
 To run the live test against your own Supabase, load `.env` first:
 

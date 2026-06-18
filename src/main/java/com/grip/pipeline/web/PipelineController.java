@@ -56,7 +56,7 @@ public class PipelineController {
                         + "Add contacts with multiple status events to see velocity analytics.");
     }
 
-    record TestResponse(String message, String userId, String note) {}
+    record TestResponse(String message, String userId, String note) { }
 
     /** The Supabase user id is the JWT subject. */
     private static UUID currentUserId(Jwt jwt) {

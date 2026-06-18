@@ -10,10 +10,10 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          # Supabase signs session JWTs with HS256 using the project's JWT
-          # secret (Project Settings → API → JWT Secret). Supplied via env.
-          # Base64-encoded so binary secrets survive .env round-tripping.
-          secret-key: ${GRIP_JWT_SECRET:}
+          # Supabase signs session JWTs with ES256 (asymmetric ECDSA).
+          # Keys are fetched from the JWKS endpoint — no secret needed here.
+          jwk-set-uri: ${GRIP_JWK_SET_URI:https://pfhptnmeqgmgoevvmywm.supabase.co/auth/v1/.well-known/jwks.json}
+          jws-algorithms: ES256
   datasource:
     # Point these at your Supabase Postgres. Use the direct connection (port 5432)
     # or the session pooler; never commit real credentials — supply via env.

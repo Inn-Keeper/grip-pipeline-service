@@ -19,7 +19,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final Logger LOG = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler({
         MethodArgumentTypeMismatchException.class,
@@ -33,7 +33,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleUnexpected(Exception ex) {
-        log.error("Unhandled exception serving pipeline request", ex);
+        LOG.error("Unhandled exception serving pipeline request", ex);
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error");
     }
 

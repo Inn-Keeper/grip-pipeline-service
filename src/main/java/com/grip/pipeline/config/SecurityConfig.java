@@ -1,6 +1,5 @@
 package com.grip.pipeline.config;
 
-import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -9,7 +8,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.web.cors.CorsConfiguration;
@@ -17,26 +15,22 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 /**
- * Stateless JWT security. Supabase signs session tokens with HS256 using the
- * project JWT secret; this service validates them and derives the user from the
+ * Stateless JWT security. Supabase signs session tokens with ES256; this
+ * service validates them through the project JWKS and derives the user from the
  * {@code sub} claim, so no endpoint takes a user id from the caller.
  *
- * <p>The OpenAPI docs ({@code /docs}, {@code /v3/api-docs}) stay public so the
+ * <p>
+ * The OpenAPI docs ({@code /docs}, {@code /v3/api-docs}) stay public so the
  * API can be browsed without a token; everything under {@code /api} requires a
  * valid bearer token.
  */
 @Configuration
 public class SecurityConfig {
 
-    private static final String HMAC_SHA256 = "HmacSHA256";
-
-    private final String jwtSecret;
     private final String allowedOrigins;
 
     public SecurityConfig(
-            @Value("${spring.security.oauth2.resourceserver.jwt.secret-key:}") String jwtSecret,
             @Value("${grip.cors.allowed-origins:http://localhost:5173}") String allowedOrigins) {
-        this.jwtSecret = jwtSecret;
         this.allowedOrigins = allowedOrigins;
     }
 
@@ -81,19 +75,4 @@ public class SecurityConfig {
         return source;
     }
 
-    /**
-     * HS256 decoder built from the raw Supabase JWT secret. Supabase's secret is
-     * a plain UTF-8 string (not base64), so it is used directly as HMAC key
-     * material.
-     */
-    @Bean
-    JwtDecoder jwtDecoder() {
-        if (jwtSecret == null || jwtSecret.isBlank()) {
-            throw new IllegalStateException(
-                    "GRIP_JWT_SECRET is not set. Supply Supabase's JWT secret "
-                            + "(Project Settings → API → JWT Secret).");
-        }
-        SecretKeySpec key = new SecretKeySpec(jwtSecret.getBytes(), HMAC_SHA256);
-        return NimbusJwtDecoder.withSecretKey(key).build();
-    }
 }

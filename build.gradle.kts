@@ -1,5 +1,6 @@
 plugins {
     java
+    checkstyle
     id("org.springframework.boot") version "3.3.5"
     id("io.spring.dependency-management") version "1.1.6"
 }
@@ -38,6 +39,11 @@ dependencies {
 // throws IllegalArgumentException from spring-asm.
 springBoot {
     mainClass = "com.grip.pipeline.PipelineServiceApplication"
+}
+
+checkstyle {
+    toolVersion = "10.14.2"
+    configFile = file("config/checkstyle/checkstyle.xml")
 }
 
 tasks.withType<Test> {

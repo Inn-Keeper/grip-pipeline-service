@@ -26,7 +26,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         type = SecuritySchemeType.HTTP,
         scheme = "bearer",
         bearerFormat = "JWT",
-        description = "Supabase session JWT. Paste the access_token (HS256).")
+        description = "Supabase session JWT. Paste the access_token (ES256).")
 public class PipelineServiceApplication {
 
     public static void main(String[] args) {

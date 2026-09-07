@@ -21,38 +21,38 @@ import org.springframework.stereotype.Component;
 @Component
 public class ReminderScheduler {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ReminderScheduler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReminderScheduler.class);
 
-    private final ContactRepository contacts;
-    private final PipelineAnalyticsService analytics;
-    private final ReminderNotifier notifier;
-    private final Clock clock;
+  private final ContactRepository contacts;
+  private final PipelineAnalyticsService analytics;
+  private final ReminderNotifier notifier;
+  private final Clock clock;
 
-    public ReminderScheduler(
-            ContactRepository contacts,
-            PipelineAnalyticsService analytics,
-            ReminderNotifier notifier,
-            Clock clock) {
-        this.contacts = contacts;
-        this.analytics = analytics;
-        this.notifier = notifier;
-        this.clock = clock;
+  public ReminderScheduler(
+      ContactRepository contacts,
+      PipelineAnalyticsService analytics,
+      ReminderNotifier notifier,
+      Clock clock) {
+    this.contacts = contacts;
+    this.analytics = analytics;
+    this.notifier = notifier;
+    this.clock = clock;
+  }
+
+  /** Runs daily; cron is overridable via {@code grip.reminders.cron}. */
+  @Scheduled(cron = "${grip.reminders.cron:0 0 8 * * *}", zone = "${grip.reminders.zone:UTC}")
+  public void dispatchDailyReminders() {
+    LocalDate today = LocalDate.now(clock);
+    List<UUID> users = contacts.findUsersWithDueActions(today);
+    LOG.info("Reminder sweep for {}: {} user(s) with due actions", today, users.size());
+
+    for (UUID userId : users) {
+      try {
+        List<DueContact> due = analytics.due(userId, today);
+        notifier.notifyDue(userId, due);
+      } catch (RuntimeException ex) {
+        LOG.error("Failed to dispatch reminders for user {}", userId, ex);
+      }
     }
-
-    /** Runs daily; cron is overridable via {@code grip.reminders.cron}. */
-    @Scheduled(cron = "${grip.reminders.cron:0 0 8 * * *}", zone = "${grip.reminders.zone:UTC}")
-    public void dispatchDailyReminders() {
-        LocalDate today = LocalDate.now(clock);
-        List<UUID> users = contacts.findUsersWithDueActions(today);
-        LOG.info("Reminder sweep for {}: {} user(s) with due actions", today, users.size());
-
-        for (UUID userId : users) {
-            try {
-                List<DueContact> due = analytics.due(userId, today);
-                notifier.notifyDue(userId, due);
-            } catch (RuntimeException ex) {
-                LOG.error("Failed to dispatch reminders for user {}", userId, ex);
-            }
-        }
-    }
+  }
 }

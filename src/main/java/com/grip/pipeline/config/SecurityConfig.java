@@ -27,52 +27,50 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 public class SecurityConfig {
 
-    private final String allowedOrigins;
+  private final String allowedOrigins;
 
-    public SecurityConfig(
-            @Value("${grip.cors.allowed-origins:http://localhost:5173}") String allowedOrigins) {
-        this.allowedOrigins = allowedOrigins;
-    }
+  public SecurityConfig(
+      @Value("${grip.cors.allowed-origins:http://localhost:5173}") String allowedOrigins) {
+    this.allowedOrigins = allowedOrigins;
+  }
 
-    @Bean
-    SecurityFilterChain filterChain(HttpSecurity http, JwtDecoder jwtDecoder) throws Exception {
-        http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .authorizeHttpRequests(
-                        auth ->
-                                auth.requestMatchers(
-                                                "/docs",
-                                                "/docs/**",
-                                                "/swagger-ui/**",
-                                                "/v3/api-docs",
-                                                "/v3/api-docs/**")
-                                        .permitAll()
-                                        .requestMatchers("/api/**")
-                                        .authenticated()
-                                        .anyRequest()
-                                        .denyAll())
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(jwtDecoder)))
-                .sessionManagement(
-                        session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                // Stateless token API: no CSRF tokens, no HTTP Basic prompt.
-                .csrf(AbstractHttpConfigurer::disable)
-                .httpBasic(AbstractHttpConfigurer::disable)
-                .formLogin(AbstractHttpConfigurer::disable)
-                .exceptionHandling(
-                        ex ->
-                                ex.authenticationEntryPoint(
-                                        new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));
-        return http.build();
-    }
+  @Bean
+  SecurityFilterChain filterChain(HttpSecurity http, JwtDecoder jwtDecoder) throws Exception {
+    http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
+        .authorizeHttpRequests(
+            auth -> auth.requestMatchers(
+                "/docs",
+                "/docs/**",
+                "/swagger-ui/**",
+                "/v3/api-docs",
+                "/v3/api-docs/**")
+                .permitAll()
+                .requestMatchers("/api/**")
+                .authenticated()
+                .anyRequest()
+                .denyAll())
+        .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(jwtDecoder)))
+        .sessionManagement(
+            session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        // Stateless token API: no CSRF tokens, no HTTP Basic prompt.
+        .csrf(AbstractHttpConfigurer::disable)
+        .httpBasic(AbstractHttpConfigurer::disable)
+        .formLogin(AbstractHttpConfigurer::disable)
+        .exceptionHandling(
+            ex -> ex.authenticationEntryPoint(
+                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));
+    return http.build();
+  }
 
-    @Bean
-    CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(java.util.List.of(allowedOrigins.split(",")));
-        config.setAllowedMethods(java.util.List.of("GET", "OPTIONS"));
-        config.setAllowedHeaders(java.util.List.of("Authorization", "Content-Type"));
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/api/**", config);
-        return source;
-    }
+  @Bean
+  CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration config = new CorsConfiguration();
+    config.setAllowedOrigins(java.util.List.of(allowedOrigins.split(",")));
+    config.setAllowedMethods(java.util.List.of("GET", "OPTIONS"));
+    config.setAllowedHeaders(java.util.List.of("Authorization", "Content-Type"));
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/api/**", config);
+    return source;
+  }
 
 }

@@ -11,5 +11,5 @@ import java.util.UUID;
  */
 public interface ReminderNotifier {
 
-    void notifyDue(UUID userId, List<DueContact> due);
+  void notifyDue(UUID userId, List<DueContact> due);
 }

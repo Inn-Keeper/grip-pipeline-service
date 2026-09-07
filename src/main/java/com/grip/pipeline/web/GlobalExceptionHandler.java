@@ -12,34 +12,34 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /**
- * Translates exceptions into {@link ApiError} bodies. Client mistakes become 400
+ * Translates exceptions into {@link ApiError} bodies. Client mistakes become
+ * 400
  * with a useful message; unexpected failures are logged with their stack trace
  * (never swallowed) and returned as an opaque 500.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    private static final Logger LOG = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    @ExceptionHandler({
-        MethodArgumentTypeMismatchException.class,
-        MissingServletRequestParameterException.class,
-        MethodArgumentNotValidException.class,
-        IllegalArgumentException.class
-    })
-    public ResponseEntity<ApiError> handleBadRequest(Exception ex) {
-        return build(HttpStatus.BAD_REQUEST, ex.getMessage());
-    }
+  @ExceptionHandler({
+      MethodArgumentTypeMismatchException.class,
+      MissingServletRequestParameterException.class,
+      MethodArgumentNotValidException.class,
+      IllegalArgumentException.class
+  })
+  public ResponseEntity<ApiError> handleBadRequest(Exception ex) {
+    return build(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiError> handleUnexpected(Exception ex) {
-        LOG.error("Unhandled exception serving pipeline request", ex);
-        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error");
-    }
+  @ExceptionHandler(Exception.class)
+  public ResponseEntity<ApiError> handleUnexpected(Exception ex) {
+    LOG.error("Unhandled exception serving pipeline request", ex);
+    return build(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error");
+  }
 
-    private ResponseEntity<ApiError> build(HttpStatus status, String message) {
-        ApiError body =
-                new ApiError(Instant.now(), status.value(), status.getReasonPhrase(), message);
-        return ResponseEntity.status(status).body(body);
-    }
+  private ResponseEntity<ApiError> build(HttpStatus status, String message) {
+    ApiError body = new ApiError(Instant.now(), status.value(), status.getReasonPhrase(), message);
+    return ResponseEntity.status(status).body(body);
+  }
 }

@@ -8,9 +8,9 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class AppConfig {
 
-    /** Injectable system clock — lets controllers/scheduler/tests pin "today". */
-    @Bean
-    Clock clock() {
-        return Clock.systemUTC();
-    }
+  /** Injectable system clock — lets controllers/scheduler/tests pin "today". */
+  @Bean
+  Clock clock() {
+    return Clock.systemUTC();
+  }
 }

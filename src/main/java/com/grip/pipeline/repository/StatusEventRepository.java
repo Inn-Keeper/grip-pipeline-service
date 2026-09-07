@@ -12,6 +12,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
  */
 public interface StatusEventRepository extends JpaRepository<StatusEvent, UUID> {
 
-    /** All transitions for a user, oldest first, so callers can walk each contact's timeline. */
-    List<StatusEvent> findByUserIdOrderByCreatedAtAsc(UUID userId);
+  /**
+   * All transitions for a user, oldest first, so callers can walk each contact's
+   * timeline.
+   */
+  List<StatusEvent> findByUserIdOrderByCreatedAtAsc(UUID userId);
 }

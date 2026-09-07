@@ -12,12 +12,13 @@ import java.util.List;
  */
 public record VelocityReport(List<StageVelocity> stages) {
 
-    /**
-     * @param fromStage   the stage being measured
-     * @param toStage     the stage contacts moved to next
-     * @param avgDays     mean days between the two transitions, 2-decimal scale
-     * @param transitions number of observed transitions averaged
-     */
-    public record StageVelocity(
-            PipelineStage fromStage, PipelineStage toStage, BigDecimal avgDays, long transitions) { }
+  /**
+   * @param fromStage   the stage being measured
+   * @param toStage     the stage contacts moved to next
+   * @param avgDays     mean days between the two transitions, 2-decimal scale
+   * @param transitions number of observed transitions averaged
+   */
+  public record StageVelocity(
+      PipelineStage fromStage, PipelineStage toStage, BigDecimal avgDays, long transitions) {
+  }
 }

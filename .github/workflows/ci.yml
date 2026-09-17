@@ -21,10 +21,10 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      # ubuntu-latest ships a running Docker daemon, so the Testcontainers IT
-      # (PipelineAnalyticsTestcontainersIT) actually runs here — unlike a laptop
-      # without Docker, where it auto-skips. The live Supabase IT stays skipped
-      # (no GRIP_DB_URL), so CI needs no secrets.
+      # ubuntu-latest ships a running Docker daemon, so the Testcontainers ITs
+      # (PipelineAnalyticsTestcontainersIT, PipelineEndpointsIT) actually run
+      # here — unlike a laptop without Docker, where they auto-skip. They use a
+      # throwaway Postgres and a test-generated signing key, so CI needs no secrets.
       - name: Build and test
         run: ./gradlew build --no-daemon
 

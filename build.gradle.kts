@@ -18,6 +18,12 @@ repositories {
     mavenCentral()
 }
 
+// Spring Boot manages Testcontainers (1.19.8 on Boot 3.3) and overrides versions
+// pinned on individual modules, so set the managed version. Releases before
+// 1.21.4 use a Docker API that Docker Engine 29 refuses, and the
+// disabledWithoutDocker ITs then skip silently instead of failing.
+extra["testcontainers.version"] = "1.21.4"
+
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
@@ -29,8 +35,8 @@ dependencies {
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
-    testImplementation("org.testcontainers:junit-jupiter:1.20.3")
-    testImplementation("org.testcontainers:postgresql:1.20.3")
+    testImplementation("org.testcontainers:junit-jupiter")
+    testImplementation("org.testcontainers:postgresql")
 }
 
 // Declared explicitly so the Spring Boot plugin does not scan compiled classes
@@ -48,4 +54,7 @@ checkstyle {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    // @SpringBootTest scans compiled classes too and trips over the same "._*"
+    // sidecars (see mainClass above); skip files Spring cannot parse.
+    systemProperty("spring.classformat.ignore", "true")
 }

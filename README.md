@@ -139,26 +139,23 @@ docker run --rm -p 8080:8080 --env-file .env grip-pipeline-service
   status-event trigger fires, and asserts velocity/due — including
   cross-user isolation. Needs no credentials; **skipped automatically when Docker
   is unavailable** (`disabledWithoutDocker`), so it runs in CI.
-- **Live integration test** (`PipelineEndpointsIT`) hits the real Supabase DB
-  through the full HTTP + JWT stack, asserts 401 with no token, and 400 for a
-  non-UUID subject. **Skipped unless `GRIP_DB_URL` is set.** Assertions are
-  data-agnostic (an unknown `sub` yields an empty report) so they don't go
-  brittle as real data changes.
+- **Endpoint IT** (`PipelineEndpointsIT`) drives the full HTTP + JWT stack
+  against the same kind of throwaway Postgres. Tokens are ES256-signed by a key
+  the test generates and serves from a local JWKS URL, so they pass the same
+  validation as Supabase tokens. It asserts that `sub` scopes the data, and it
+  checks 401 (no token, wrong signing key), 400 (non-UUID subject), and 404/405/406
+  for unknown paths, unsupported methods and non-JSON `Accept`. Also skipped
+  without Docker.
 
-To run the live test against your own Supabase, load `.env` first:
-
-```bash
-set -a; . ./.env; set +a
-./gradlew test --tests 'com.grip.pipeline.web.PipelineEndpointsIT'
-```
+Testcontainers needs 1.21.4 or newer for Docker Engine 29; older releases are
+refused by the daemon and the ITs skip instead of failing.
 
 ### Continuous integration
 
 `.github/workflows/ci.yml` runs `./gradlew build` on every push and PR to
-`main`. GitHub's `ubuntu-latest` runners have a Docker daemon, so the
-Testcontainers IT actually executes there. The live Supabase IT stays skipped
-(no `GRIP_DB_URL`), so **CI needs no secrets**. The test HTML report is uploaded
-as a build artifact.
+`main`. GitHub's `ubuntu-latest` runners have a Docker daemon, so both ITs
+execute there, and **CI needs no secrets**. The test HTML report is uploaded as
+a build artifact.
 
 ## Notes
 

@@ -45,7 +45,6 @@ class PipelineAnalyticsTestcontainersIT {
     registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
     registry.add("spring.datasource.username", POSTGRES::getUsername);
     registry.add("spring.datasource.password", POSTGRES::getPassword);
-    registry.add("spring.security.oauth2.resourceserver.jwt.secret-key", () -> "x".repeat(32));
   }
 
   @Autowired

@@ -1,4 +1,4 @@
--- DERIVED from tech-refresh/supabase/migrations 0001_init.sql and
+-- DERIVED from grip-apps/supabase/migrations 0001_init.sql and
 -- 0003_status_events.sql for Testcontainers. Only the contacts and
 -- status_events tables this service reads are kept. Transformations vs.
 -- the source: auth.users FK references become plain uuid columns, the

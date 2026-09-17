@@ -3,7 +3,7 @@
 [![CI](https://github.com/Inn-Keeper/grip-pipeline-service/actions/workflows/ci.yml/badge.svg)](https://github.com/Inn-Keeper/grip-pipeline-service/actions/workflows/ci.yml)
 
 A small, polished **Spring Boot (Java 21)** service that adds hiring-pipeline
-analytics and follow-up reminders on top of the [Grip](../tech-refresh) job-hunt
+analytics and follow-up reminders on top of the [Grip](../grip-apps) job-hunt
 toolkit. It reads Grip's existing Supabase Postgres tables (`contacts`,
 `status_events`) — read-only, no schema ownership.
 

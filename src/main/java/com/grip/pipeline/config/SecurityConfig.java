@@ -1,5 +1,7 @@
 package com.grip.pipeline.config;
 
+import java.util.Arrays;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,18 +22,22 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
  * {@code sub} claim, so no endpoint takes a user id from the caller.
  *
  * <p>
- * The OpenAPI docs ({@code /docs}, {@code /v3/api-docs}) stay public so the
- * API can be browsed without a token; everything under {@code /api} requires a
- * valid bearer token.
+ * The OpenAPI docs ({@code /docs}, {@code /v3/api-docs}) and the health probe
+ * ({@code /actuator/health}) stay public; everything under {@code /api}
+ * requires a valid bearer token, and anything else is denied.
  */
 @Configuration
 public class SecurityConfig {
 
-  private final String allowedOrigins;
+  private final List<String> allowedOrigins;
 
-  public SecurityConfig(
-      @Value("${grip.cors.allowed-origins:http://localhost:5173}") String allowedOrigins) {
-    this.allowedOrigins = allowedOrigins;
+  public SecurityConfig(@Value("${grip.cors.allowed-origins}") String allowedOrigins) {
+    // Trimmed because the value arrives as one env var: "a, b" would otherwise
+    // register " b", which matches no Origin header and fails silently.
+    this.allowedOrigins = Arrays.stream(allowedOrigins.split(","))
+        .map(String::trim)
+        .filter(origin -> !origin.isEmpty())
+        .toList();
   }
 
   @Bean
@@ -43,7 +49,10 @@ public class SecurityConfig {
                 "/docs/**",
                 "/swagger-ui/**",
                 "/v3/api-docs",
-                "/v3/api-docs/**")
+                "/v3/api-docs/**",
+                // The host's health probe carries no token. Safe to expose: the
+                // body is a bare status (management.endpoint.health.show-details).
+                "/actuator/health")
                 .permitAll()
                 .requestMatchers("/api/**")
                 .authenticated()
@@ -65,9 +74,9 @@ public class SecurityConfig {
   @Bean
   CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration config = new CorsConfiguration();
-    config.setAllowedOrigins(java.util.List.of(allowedOrigins.split(",")));
-    config.setAllowedMethods(java.util.List.of("GET", "OPTIONS"));
-    config.setAllowedHeaders(java.util.List.of("Authorization", "Content-Type"));
+    config.setAllowedOrigins(allowedOrigins);
+    config.setAllowedMethods(List.of("GET", "OPTIONS"));
+    config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/api/**", config);
     return source;

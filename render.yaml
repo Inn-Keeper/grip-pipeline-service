@@ -1,0 +1,56 @@
+# Render Blueprint for grip-pipeline-service. Create the service with
+# Dashboard → Blueprints → New Blueprint Instance, pointed at this repo, then
+# fill the three values marked `sync: false` when it prompts.
+#
+# The free plan spins the service down after 15 minutes without traffic. A JVM
+# cold start is slower than a scripted one — expect the first request after a
+# sleep to take a minute or so while the instance wakes and Hibernate builds
+# its metamodel. Scheduled jobs do not fire while asleep, which is why the
+# reminder sweep is disabled below.
+
+services:
+  - type: web
+    name: grip-pipeline-service
+    runtime: docker
+    plan: free
+    # Free-plan regions: oregon, ohio, virginia, frankfurt, singapore. Pick the
+    # one nearest your Supabase project — every request is a database read, so
+    # this distance is on the critical path, unlike for the AI service.
+    region: oregon
+    dockerfilePath: ./Dockerfile
+
+    # Actuator's health endpoint includes the DataSource check, so a wrong or
+    # missing GRIP_DB_* fails the deploy here instead of leaving a service that
+    # answers 500 on every query. It needs no token (see SecurityConfig).
+    healthCheckPath: /actuator/health
+
+    envVars:
+      # Exact origins, comma-separated, no trailing slash. Vercel preview
+      # deployments get their own origins and are deliberately not listed.
+      - key: GRIP_CORS_ALLOWED_ORIGINS
+        value: https://grip-platform-web.vercel.app
+
+      # Spring reads "-" as "never run". The daily reminder sweep would not
+      # fire reliably on a free instance that sleeps, and its only notifier
+      # writes a log line, so it is off until it notifies something real.
+      # Enable it by moving the sweep to a Render Cron Job, not by setting a
+      # cron here.
+      - key: GRIP_REMINDERS_CRON
+        value: "-"
+
+      # GRIP_JWK_SET_URI is omitted: application.yml already defaults to the
+      # Grip Supabase project. Set it here to point at a different project.
+
+      # sync: false keeps these out of the repo. Render prompts for them when
+      # the blueprint is created, and stores them on the service.
+      #
+      # GRIP_DB_URL is the Supabase *session pooler* host with a jdbc: prefix —
+      # jdbc:postgresql://aws-0-<region>.pooler.supabase.com:5432/postgres. The
+      # direct db.<ref>.supabase.co host is IPv6-only and unreachable from here.
+      - key: GRIP_DB_URL
+        sync: false
+      # The pooler username carries the project ref: postgres.<project-ref>.
+      - key: GRIP_DB_USER
+        sync: false
+      - key: GRIP_DB_PASSWORD
+        sync: false

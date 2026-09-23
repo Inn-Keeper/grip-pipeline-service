@@ -124,6 +124,31 @@ docker build -t grip-pipeline-service .
 docker run --rm -p 8080:8080 --env-file .env grip-pipeline-service
 ```
 
+## Deploy
+
+`render.yaml` is a Render Blueprint: **Dashboard → Blueprints → New Blueprint
+Instance**, point it at this repo, and Render prompts for `GRIP_DB_URL`,
+`GRIP_DB_USER` and `GRIP_DB_PASSWORD`. Everything else is in the file.
+
+Two things it configures that are easy to get wrong elsewhere:
+
+- **Heap.** The JVM takes 25% of the container limit by default, which is a
+  128 MB heap on a 512 MB instance — not enough for Boot + Hibernate. The
+  Dockerfile passes `-XX:MaxRAMPercentage=75`.
+- **Origins.** `GRIP_CORS_ALLOWED_ORIGINS` must list the web app's exact
+  origin, comma-separated, with no trailing slash. Preview deployments have
+  their own origins and are not covered.
+
+The deploy is gated on `GET /actuator/health`, which includes the DataSource
+check, so a wrong connection string fails the deploy instead of producing a
+service that 500s on every request. That endpoint is public but returns only
+`{"status":"UP"}` — no component detail.
+
+On the free plan the instance sleeps after 15 minutes idle, so the daily
+reminder sweep would not fire; the blueprint sets `GRIP_REMINDERS_CRON=-` to
+disable it. Reminders need a Render Cron Job and a real
+`ReminderNotifier` before they mean anything.
+
 ## Tests
 
 ```bash

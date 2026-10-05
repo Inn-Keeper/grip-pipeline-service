@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /**
- * Translates exceptions into {@link ApiError} bodies. Client mistakes become
- * 400 with a useful message, Spring MVC's own 4xx errors (404, 405, ...) keep
+ * Translates exceptions into {@link ApiError} bodies. Spring's request-binding
+ * errors become 400; anything else (including bad stored data) is a 500, Spring MVC's own 4xx errors (404, 405, ...) keep
  * their status, and unexpected failures are logged with their stack trace
  * (never swallowed) and returned as an opaque 500.
  */
@@ -26,8 +26,7 @@ public class GlobalExceptionHandler {
   @ExceptionHandler({
       MethodArgumentTypeMismatchException.class,
       MissingServletRequestParameterException.class,
-      MethodArgumentNotValidException.class,
-      IllegalArgumentException.class
+      MethodArgumentNotValidException.class
   })
   public ResponseEntity<ApiError> handleBadRequest(Exception ex) {
     return build(HttpStatus.BAD_REQUEST, ex.getMessage());

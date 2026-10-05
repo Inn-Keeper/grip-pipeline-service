@@ -33,7 +33,7 @@ public class PipelineController {
     this.analytics = analytics;
   }
 
-  @Operation(summary = "Stage velocity", description = "Average days contacts spend in each stage before moving on, derived from the "
+  @Operation(summary = "Stage velocity", description = "Average days between each (fromStage, toStage) transition, derived from the "
       + "gaps between consecutive status_events. Contacts with a single "
       + "recorded event contribute nothing, since no dwell interval exists.")
   @GetMapping("/velocity")
@@ -41,13 +41,8 @@ public class PipelineController {
     return analytics.velocity(currentUserId(jwt));
   }
 
-  /** The Supabase user id is the JWT subject. */
+  /** The Supabase user id is the JWT subject; a non-UUID one is a server-side 500. */
   private static UUID currentUserId(Jwt jwt) {
-    try {
-      return UUID.fromString(jwt.getSubject());
-    } catch (IllegalArgumentException e) {
-      throw new IllegalArgumentException(
-          "JWT subject is not a valid user UUID: " + jwt.getSubject(), e);
-    }
+    return UUID.fromString(jwt.getSubject());
   }
 }

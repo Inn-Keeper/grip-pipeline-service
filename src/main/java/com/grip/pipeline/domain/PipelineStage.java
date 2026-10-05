@@ -7,8 +7,7 @@ import java.util.List;
  * {@code contacts.status} in the Grip schema (migration 0001_init.sql).
  *
  * <p>
- * {@link #OFFER} and {@link #REJECTED} are both terminal; only OFFER counts
- * as a positive funnel outcome.
+ * {@link #OFFER} and {@link #REJECTED} are both terminal.
  */
 public enum PipelineStage {
   CONTACTED("Contacted"),
@@ -27,12 +26,8 @@ public enum PipelineStage {
     return dbValue;
   }
 
-  /**
-   * The ordered progression a healthy application follows. REJECTED is a
-   * terminal off-ramp reachable from any stage and is intentionally excluded
-   * from the linear funnel sequence.
-   */
-  public static final List<PipelineStage> FUNNEL_ORDER = List.of(CONTACTED, APPLIED, INTERVIEWING, OFFER);
+  /** DB values of stages that need no follow-up; bound into the due-contact queries. */
+  public static final List<String> TERMINAL_DB_VALUES = List.of(OFFER.dbValue, REJECTED.dbValue);
 
   public static PipelineStage fromDbValue(String value) {
     for (PipelineStage stage : values()) {

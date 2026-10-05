@@ -10,10 +10,8 @@ import java.util.UUID;
 /**
  * Read-only mapping of the Grip {@code status_events} table (migration
  * 0003_status_events.sql). One row per contact status transition, written by a
- * Postgres trigger so the funnel is exact rather than approximated.
- *
- * <p>
- * This is the source of truth for both funnel conversion and stage velocity.
+ * Postgres trigger so the funnel is exact rather than approximated. Source of
+ * truth for stage velocity.
  */
 @Entity
 @Table(name = "status_events")
@@ -36,10 +34,6 @@ public class StatusEvent {
 
   protected StatusEvent() {
     // JPA
-  }
-
-  public UUID getId() {
-    return id;
   }
 
   public UUID getContactId() {

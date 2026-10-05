@@ -3,13 +3,30 @@ package com.grip.pipeline.notify;
 import com.grip.pipeline.service.DueContact;
 import java.util.List;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
-/**
- * Sink for due-follow-up reminders produced by the daily scheduler. Kept as an
- * interface so the logging implementation can be swapped for email/push without
- * touching the scheduler.
- */
-public interface ReminderNotifier {
+/** Reminder sink: logs each due follow-up. Extract an interface once email/push exists. */
+@Component
+public class ReminderNotifier {
 
-  void notifyDue(UUID userId, List<DueContact> due);
+  private static final Logger LOG = LoggerFactory.getLogger(ReminderNotifier.class);
+
+  public void notifyDue(UUID userId, List<DueContact> due) {
+    if (due.isEmpty()) {
+      LOG.info("No follow-ups due for user {}", userId);
+      return;
+    }
+    LOG.info("{} follow-up(s) due for user {}:", due.size(), userId);
+    for (DueContact contact : due) {
+      LOG.info(
+          "  • {} [{}] — {} (due {}, {} day(s) overdue)",
+          contact.name(),
+          contact.stage().dbValue(),
+          contact.nextAction(),
+          contact.nextActionDate(),
+          contact.overdueDays());
+    }
+  }
 }

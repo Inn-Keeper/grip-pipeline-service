@@ -67,7 +67,7 @@ class PipelineAnalyticsServiceTest {
   @Test
   void dueComputesOverdueDaysRelativeToAsOf() {
     LocalDate today = LocalDate.of(2026, 6, 17);
-    when(contacts.findDue(USER, today))
+    when(contacts.findDue(USER, today, PipelineStage.TERMINAL_DB_VALUES))
         .thenReturn(
             List.of(
                 Fixtures.dueContact(

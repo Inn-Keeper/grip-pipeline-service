@@ -1,5 +1,6 @@
 package com.grip.pipeline.scheduler;
 
+import com.grip.pipeline.domain.PipelineStage;
 import com.grip.pipeline.notify.ReminderNotifier;
 import com.grip.pipeline.repository.ContactRepository;
 import com.grip.pipeline.service.DueContact;
@@ -39,11 +40,11 @@ public class ReminderScheduler {
     this.clock = clock;
   }
 
-  /** Runs daily; cron is overridable via {@code grip.reminders.cron}. */
-  @Scheduled(cron = "${grip.reminders.cron:0 0 8 * * *}", zone = "${grip.reminders.zone:UTC}")
+  /** Cron and zone come from application.yml ({@code grip.reminders}); "today" is UTC. */
+  @Scheduled(cron = "${grip.reminders.cron}", zone = "${grip.reminders.zone}")
   public void dispatchDailyReminders() {
     LocalDate today = LocalDate.now(clock);
-    List<UUID> users = contacts.findUsersWithDueActions(today);
+    List<UUID> users = contacts.findUsersWithDueActions(today, PipelineStage.TERMINAL_DB_VALUES);
     LOG.info("Reminder sweep for {}: {} user(s) with due actions", today, users.size());
 
     for (UUID userId : users) {

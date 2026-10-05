@@ -12,7 +12,7 @@ toolkit. It reads Grip's existing Supabase Postgres tables (`contacts`,
 The React web/mobile apps own CRUD. This service owns the work that is awkward in
 a Supabase client app but natural on the JVM:
 
-- **Aggregate analytics** — conversion funnel and stage velocity computed from
+- **Aggregate analytics** — stage velocity computed from
   the exact `status_events` transition log.
 - **Scheduled jobs** — a daily `@Scheduled` sweep that surfaces due follow-ups.
 
@@ -26,7 +26,7 @@ web/mobile (writes) ─┐
                      ├──► Supabase Postgres (contacts, status_events)
 this service (reads) ─┘
    controller ──► service (velocity) ──► repository (JPA)
-   scheduler ───► analytics (due) ───► notifier (logging; swappable for email/push)
+   scheduler ───► analytics (due) ───► notifier (logging only)
 ```
 
 - **Read-only JPA** entities map the real Grip tables; `ddl-auto: none` so the
@@ -147,7 +147,8 @@ service that 500s on every request. That endpoint is public but returns only
 On the free plan the instance sleeps after 15 minutes idle, so the daily
 reminder sweep would not fire; the blueprint sets `GRIP_REMINDERS_CRON=-` to
 disable it. Reminders need a Render Cron Job and a real
-`ReminderNotifier` before they mean anything.
+delivery channel in `ReminderNotifier` before they mean anything. Due dates
+are evaluated in UTC.
 
 ## Tests
 

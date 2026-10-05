@@ -28,10 +28,6 @@ public class Contact {
   @Column(nullable = false)
   private String status;
 
-  private String role;
-
-  private String link;
-
   @Column(name = "next_action")
   private String nextAction;
 
@@ -46,24 +42,12 @@ public class Contact {
     return id;
   }
 
-  public UUID getUserId() {
-    return userId;
-  }
-
   public String getName() {
     return name;
   }
 
   public PipelineStage getStage() {
     return PipelineStage.fromDbValue(status);
-  }
-
-  public String getRole() {
-    return role;
-  }
-
-  public String getLink() {
-    return link;
   }
 
   public String getNextAction() {

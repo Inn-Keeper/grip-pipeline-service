@@ -130,10 +130,10 @@ class PipelineEndpointsIT {
   }
 
   @Test
-  void tokenWithNonUuidSubjectYields400() {
+  void tokenWithNonUuidSubjectYields500() {
     HttpHeaders headers = bearer("not-a-uuid", SIGNING_KEY);
     assertThat(status(HttpMethod.GET, "/api/pipeline/velocity", headers))
-        .isEqualTo(HttpStatus.BAD_REQUEST);
+        .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
   }
 
   @Test

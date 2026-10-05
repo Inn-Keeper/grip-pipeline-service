@@ -3,6 +3,7 @@ package com.grip.pipeline.service;
 import com.grip.pipeline.domain.Contact;
 import com.grip.pipeline.domain.PipelineStage;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 /**
@@ -18,7 +19,7 @@ public record DueContact(
     long overdueDays) {
 
   static DueContact of(Contact contact, LocalDate asOf) {
-    long overdue = java.time.temporal.ChronoUnit.DAYS.between(contact.getNextActionDate(), asOf);
+    long overdue = ChronoUnit.DAYS.between(contact.getNextActionDate(), asOf);
     return new DueContact(
         contact.getId(),
         contact.getName(),

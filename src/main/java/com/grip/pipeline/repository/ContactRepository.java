@@ -16,28 +16,32 @@ public interface ContactRepository extends JpaRepository<Contact, UUID> {
 
   /**
    * Contacts whose follow-up is due on or before {@code asOf} and that are not
-   * in a terminal stage (Offer/Rejected need no further action).
+   * in a terminal stage ({@code PipelineStage.TERMINAL_DB_VALUES}).
    */
   @Query("""
       select c from Contact c
       where c.userId = :userId
         and c.nextActionDate is not null
         and c.nextActionDate <= :asOf
-        and c.status not in ('Offer', 'Rejected')
+        and c.status not in :terminal
       order by c.nextActionDate asc
       """)
-  List<Contact> findDue(@Param("userId") UUID userId, @Param("asOf") LocalDate asOf);
+  List<Contact> findDue(
+      @Param("userId") UUID userId,
+      @Param("asOf") LocalDate asOf,
+      @Param("terminal") List<String> terminal);
 
   /**
    * Distinct users who have at least one non-terminal contact with a follow-up
-   * due on or before {@code asOf}. Lets the daily scheduler fan out reminders
+   * due on or before {@code asOf} (dates are UTC). Lets the daily scheduler fan out reminders
    * without an external user registry.
    */
   @Query("""
       select distinct c.userId from Contact c
       where c.nextActionDate is not null
         and c.nextActionDate <= :asOf
-        and c.status not in ('Offer', 'Rejected')
+        and c.status not in :terminal
       """)
-  List<UUID> findUsersWithDueActions(@Param("asOf") LocalDate asOf);
+  List<UUID> findUsersWithDueActions(
+      @Param("asOf") LocalDate asOf, @Param("terminal") List<String> terminal);
 }

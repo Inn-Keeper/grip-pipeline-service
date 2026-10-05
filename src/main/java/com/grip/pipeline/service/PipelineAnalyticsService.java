@@ -10,6 +10,7 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -43,16 +44,17 @@ public class PipelineAnalyticsService {
    * grouped by (fromStage, toStage). Contacts with a single recorded event
    * contribute nothing, since no dwell interval can be measured.
    */
+  // ponytail: loads every event into memory; move to a SQL LAG() query if a user reaches ~10k events
   public VelocityReport velocity(UUID userId) {
     List<StatusEvent> events = statusEvents.findByUserIdOrderByCreatedAtAsc(userId);
 
     // Group events per contact, preserving chronological order from the query.
-    Map<UUID, List<StatusEvent>> byContact = new java.util.LinkedHashMap<>();
+    Map<UUID, List<StatusEvent>> byContact = new LinkedHashMap<>();
     for (StatusEvent event : events) {
       byContact.computeIfAbsent(event.getContactId(), k -> new ArrayList<>()).add(event);
     }
 
-    Map<TransitionKey, DurationAccumulator> accumulators = new java.util.LinkedHashMap<>();
+    Map<TransitionKey, DurationAccumulator> accumulators = new LinkedHashMap<>();
     for (List<StatusEvent> timeline : byContact.values()) {
       for (int i = 1; i < timeline.size(); i++) {
         StatusEvent from = timeline.get(i - 1);
@@ -78,7 +80,7 @@ public class PipelineAnalyticsService {
    * {@code asOf}.
    */
   public List<DueContact> due(UUID userId, LocalDate asOf) {
-    List<Contact> dueContacts = contacts.findDue(userId, asOf);
+    List<Contact> dueContacts = contacts.findDue(userId, asOf, PipelineStage.TERMINAL_DB_VALUES);
     List<DueContact> result = new ArrayList<>(dueContacts.size());
     for (Contact contact : dueContacts) {
       result.add(DueContact.of(contact, asOf));
@@ -107,13 +109,10 @@ public class PipelineAnalyticsService {
       return count;
     }
 
+    // count is never 0: an accumulator only exists after its first add().
     BigDecimal avgDays() {
-      if (count == 0) {
-        return BigDecimal.ZERO.setScale(DAYS_SCALE, RoundingMode.HALF_UP);
-      }
       return BigDecimal.valueOf(totalSeconds)
-          .divide(BigDecimal.valueOf(count), 6, RoundingMode.HALF_UP)
-          .divide(BigDecimal.valueOf(SECONDS_PER_DAY), DAYS_SCALE, RoundingMode.HALF_UP);
+          .divide(BigDecimal.valueOf(count * SECONDS_PER_DAY), DAYS_SCALE, RoundingMode.HALF_UP);
     }
   }
 }

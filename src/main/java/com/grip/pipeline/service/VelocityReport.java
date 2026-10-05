@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * Average time contacts spend in each stage before moving on, derived from the
+ * Average days between each (fromStage, toStage) transition, derived from the
  * gaps between consecutive {@code status_events} for each contact.
  *
  * @param stages per-stage average dwell time

@@ -1,5 +1,5 @@
--- DERIVED from grip-apps/supabase/migrations 0001_init.sql and
--- 0003_status_events.sql for Testcontainers. Only the contacts and
+-- DERIVED from grip-apps/supabase/migrations 0001_init.sql,
+-- 0003_status_events.sql and 0020_import_stage_date.sql for Testcontainers. Only the contacts and
 -- status_events tables this service reads are kept. Transformations vs.
 -- the source: auth.users FK references become plain uuid columns, the
 -- auth.uid() defaults and all RLS/policy statements are removed (Supabase
@@ -18,6 +18,7 @@ create table contacts (
   date date,
   next_action text,
   next_action_date date,
+  stage_reached_on date,
   created_at timestamptz not null default now()
 );
 
@@ -35,7 +36,13 @@ returns trigger
 language plpgsql
 as $$
 begin
-  if tg_op = 'INSERT' or new.status is distinct from old.status then
+  if tg_op = 'INSERT' then
+    insert into status_events (user_id, contact_id, status, created_at)
+    values (
+      new.user_id, new.id, new.status,
+      coalesce((new.stage_reached_on + time '12:00') at time zone 'UTC', now())
+    );
+  elsif new.status is distinct from old.status then
     insert into status_events (user_id, contact_id, status)
     values (new.user_id, new.id, new.status);
   end if;

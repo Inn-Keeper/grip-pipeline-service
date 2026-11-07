@@ -18,6 +18,8 @@ services:
     # this distance is on the critical path, unlike for the AI service.
     region: oregon
     dockerfilePath: ./Dockerfile
+    # Deploy a push to main only after its GitHub CI checks pass.
+    autoDeployTrigger: checksPass
 
     # Actuator's health endpoint includes the DataSource check, so a wrong or
     # missing GRIP_DB_* fails the deploy here instead of leaving a service that
